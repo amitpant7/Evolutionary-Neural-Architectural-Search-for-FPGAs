@@ -10,6 +10,8 @@ from ofa.utils import get_same_padding, min_divisible_value, SEModule, ShuffleLa
 from ofa.utils import MyNetwork, MyModule
 from ofa.utils import build_activation, make_divisible
 
+import torchvision
+
 __all__ = [
     "set_layer_from_config",
     "ConvLayer",
@@ -173,7 +175,16 @@ class ConvLayer(My2DLayer):
             in_channels, out_channels, use_bn, act_func, dropout_rate, ops_order
         )
         if self.use_se:
-            self.add_module("se", SEModule(self.out_channels))
+            num_mid = make_divisible(
+                self.out_channels // 4, divisor=MyNetwork.CHANNEL_DIVISIBLE
+            )
+            se = torchvision.ops.SqueezeExcitation(
+                input_channels=self.out_channels,
+                squeeze_channels=num_mid,
+                scale_activation=nn.Hardsigmoid,
+            )
+
+            self.add_module("se", se)
 
     def weight_op(self):
         padding = get_same_padding(self.kernel_size)
@@ -537,7 +548,17 @@ class MBConvLayer(MyModule):
             ("act", build_activation(self.act_func, inplace=True)),
         ]
         if self.use_se:
-            depth_conv_modules.append(("se", SEModule(feature_dim)))
+            num_mid = make_divisible(
+                feature_dim // 4, divisor=MyNetwork.CHANNEL_DIVISIBLE
+            )
+            se = torchvision.ops.SqueezeExcitation(
+                input_channels=feature_dim,
+                squeeze_channels=num_mid,
+                scale_activation=nn.Hardsigmoid,
+            )
+
+            depth_conv_modules.append(("se", se))
+
         self.depth_conv = nn.Sequential(OrderedDict(depth_conv_modules))
 
         self.point_linear = nn.Sequential(
