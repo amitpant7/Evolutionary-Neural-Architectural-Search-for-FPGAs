@@ -48,5 +48,6 @@ def replace_all(network):
     for model in iter(network.blocks):
         repalce_se(model)
     print('All SE blocks are Replaced')
+    return network
     
 
