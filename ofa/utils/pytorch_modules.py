@@ -7,14 +7,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 from .my_modules import MyNetwork
+import torchvision
+
 
 __all__ = [
     "make_divisible",
     "build_activation",
     "ShuffleLayer",
     "MyGlobalAvgPool2d",
-    "Hswish",
-    "Hsigmoid",
     "SEModule",
     "MultiHeadCrossEntropyLoss",
 ]
@@ -42,7 +42,7 @@ def make_divisible(v, divisor, min_val=None):
 
 def build_activation(act_func, inplace=True):
     if act_func == "relu":
-        return nn.ReLU(inplace=inplace)
+        return nn.ReLU()
     elif act_func == "relu6":
         return nn.ReLU6(inplace=inplace)
     elif act_func == "tanh":
@@ -50,9 +50,9 @@ def build_activation(act_func, inplace=True):
     elif act_func == "sigmoid":
         return nn.Sigmoid()
     elif act_func == "h_swish":
-        return Hswish(inplace=inplace)
+        return nn.Hardswish()
     elif act_func == "h_sigmoid":
-        return Hsigmoid(inplace=inplace)
+        return nn.Hardsigmoid()
     elif act_func is None or act_func == "none":
         return None
     else:
@@ -90,30 +90,6 @@ class MyGlobalAvgPool2d(nn.Module):
         return "MyGlobalAvgPool2d(keep_dim=%s)" % self.keep_dim
 
 
-class Hswish(nn.Module):
-    def __init__(self, inplace=True):
-        super(Hswish, self).__init__()
-        self.inplace = inplace
-
-    def forward(self, x):
-        return x * F.relu6(x + 3.0, inplace=self.inplace) / 6.0
-
-    def __repr__(self):
-        return "Hswish()"
-
-
-class Hsigmoid(nn.Module):
-    def __init__(self, inplace=True):
-        super(Hsigmoid, self).__init__()
-        self.inplace = inplace
-
-    def forward(self, x):
-        return F.relu6(x + 3.0, inplace=self.inplace) / 6.0
-
-    def __repr__(self):
-        return "Hsigmoid()"
-
-
 class SEModule(nn.Module):
     REDUCTION = 4
 
@@ -126,22 +102,20 @@ class SEModule(nn.Module):
         num_mid = make_divisible(
             self.channel // self.reduction, divisor=MyNetwork.CHANNEL_DIVISIBLE
         )
-
+        
         self.fc = nn.Sequential(
             OrderedDict(
                 [
                     ("reduce", nn.Conv2d(self.channel, num_mid, 1, 1, 0, bias=True)),
                     ("relu", nn.ReLU(inplace=True)),
                     ("expand", nn.Conv2d(num_mid, self.channel, 1, 1, 0, bias=True)),
-                    ("h_sigmoid", Hsigmoid(inplace=True)),
+                    ("h_sigmoid", nn.Hardsigmoid(inplace=True)),
                 ]
             )
         )
 
     def forward(self, x):
-        y = x.mean(3, keepdim=True).mean(2, keepdim=True)
-        y = self.fc(y)
-        return x * y
+        return self.fc(x)
 
     def __repr__(self):
         return "SE(channel=%d, reduction=%d)" % (self.channel, self.reduction)

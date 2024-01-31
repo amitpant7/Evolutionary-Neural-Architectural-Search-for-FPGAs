@@ -65,6 +65,7 @@ class EvolutionFinder:
     # do define the type of constraint
     valid_constraint_range = {
         "arthemetic_intensity": [10, 25],
+        "latency": [10,45]
     }
 
 
@@ -145,7 +146,10 @@ class EvolutionFinder:
         self.efficiency_constraint = new_cons
 
     def set_efficiency_constraint(self, new_constraint):
-        self.efficiency_constraint = 1/new_constraint
+        if self.constraint_type == 'arthemetic_intensity':
+            self.efficiency_constraint = 1/new_constraint
+        elif self.constraint_type == 'latency':
+            self.efficiency_constraint = new_constraint
     
 
 
@@ -242,7 +246,7 @@ class EvolutionFinder:
 
             if acc > best_valids[-1]:
                 best_valids.append(acc)
-                best_info = parents[0]
+                best_info = (parents[0][0], parents[0][1], 1/parents[0][1])
             else:
                 best_valids.append(best_valids[-1])
 
