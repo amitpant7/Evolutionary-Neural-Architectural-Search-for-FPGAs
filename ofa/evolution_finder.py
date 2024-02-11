@@ -62,7 +62,7 @@ class ArchManager:
 class EvolutionFinder:
 
     # do define the type of constraint
-    valid_constraint_range = {"arthemetic_intensity": [10, 25], "latency": [10, 45]}
+    valid_constraint_range = {"arthemetic_intensity": [10, 35], "latency": [10, 45], "efficient_arthemetic_intensity": [0.2,10]}
 
     # need to add MAC and total size of model
     def __init__(
@@ -145,6 +145,8 @@ class EvolutionFinder:
         if self.constraint_type == "arthemetic_intensity":
             self.efficiency_constraint = 1 / new_constraint
         elif self.constraint_type == "latency":
+            self.efficiency_constraint = new_constraint
+        elif self.constraint_type == "efficient_arthemetic_intensity":
             self.efficiency_constraint = new_constraint
 
     # Sample an architecutre parameter and then check for constraint
